@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'flat_json_widget',
     # rest framework
     'rest_framework',
+    'rest_framework.authtoken',
     'rest_framework_gis',
     # channels
     'channels',
@@ -170,6 +171,7 @@ if not TESTING and SHELL:
 
 DJANGO_LOCI_GEOCODE_STRICT_TEST = False
 OPENWISP_CONTROLLER_CONTEXT = {'vpnserver1': 'vpn.testdomain.com'}
+OPENWISP_USERS_AUTH_API = True
 
 TEST_RUNNER = 'openwisp_utils.tests.TimeLoggingTestRunner'
 

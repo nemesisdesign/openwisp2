@@ -20,9 +20,9 @@ if __name__ == '__main__':
     execute_from_command_line(args)
 
     if not os.environ.get('SAMPLE_APP', False):
-        file_name = 'openwisp_controller/geo/tests'
+        file_name = 'openwisp_controller/geo/tests openwisp_controller/connection/tests'
     else:
-        file_name = 'tests/openwisp2/sample_geo'
+        file_name = 'tests/openwisp2/sample_geo tests/openwisp2/sample_connection'
 
     return_code = subprocess.call(
         'pytest --cov=openwisp_controller --cov-append '

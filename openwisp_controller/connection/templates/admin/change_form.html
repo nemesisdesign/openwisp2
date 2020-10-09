@@ -3,8 +3,8 @@
 
 {% block extrahead %}
     <script>
-    {% if OPENWISP_CONTROLLER_HOST %}
-        const owControllerApiHost = new URL('{{ OPENWISP_CONTROLLER_HOST }}');
+    {% if OPENWISP_CONTROLLER_API_HOST %}
+        const owControllerApiHost = new URL('{{ OPENWISP_CONTROLLER_API_HOST }}');
     {% else %}
         const owControllerApiHost = window.location;
     {% endif %}

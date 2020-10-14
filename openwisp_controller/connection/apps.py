@@ -48,7 +48,9 @@ class ConnectionConfig(AppConfig):
         )
 
         post_save.connect(
-            self.command_save_receiver, sender=Command, dispatch_uid="command_save_handler"
+            self.command_save_receiver,
+            sender=Command,
+            dispatch_uid="command_save_handler",
         )
 
     @classmethod

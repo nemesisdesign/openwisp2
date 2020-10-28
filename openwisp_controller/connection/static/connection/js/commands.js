@@ -1,5 +1,8 @@
 'use strict';
 
+var gettext = window.gettext || function (word) { return word; };
+var interpolate = interpolate || function(){};
+
 const deviceId = getObjectIdFromUrl();
 const commandWebSocket = new ReconnectingWebSocket(
     `${getWebSocketProtocol()}${owControllerApiHost.host}/ws/device/${getObjectIdFromUrl()}/command`,
@@ -32,7 +35,6 @@ django.jQuery(function ($) {
         initCommandWebSockets($);
     });
 });
-
 
 function initCommandDropdown($) {
     // Add "Send Command" widget
@@ -145,6 +147,78 @@ function initCommandDropdown($) {
 }
 
 function initCommandOverlay($) {
+    const commandConfirmationDialog = {
+        init: function() {
+            // Adds command dialog to the document
+            // Adds event handlers for utility functions
+            this.add();
+
+            $('#device_form').on('click', '#ow-command-confirm-no', function (e) {
+                e.preventDefault();
+                closeOverlay();
+                resetCommandForm();
+            });
+
+            $('#device_form').on('click', '#ow-command-confirm-dialog-wrapper', function (e) {
+                if ($('#ow-command-confirm-dialog').has(e.target).length === 0) {
+                    closeOverlay();
+                    resetCommandForm();
+                }
+            });
+
+            // Hitting ESC key closes overlay
+            $('body').keyup(function (e) {
+                // Check if command overlay is visible or not
+                if ($('#ow-command-confirm-dialog-wrapper:visible').length !== 0) {
+                    // Hide overlay on "Escape" key
+                    if (e.keyCode === 27) {
+                        closeOverlay();
+                        resetCommandForm();
+                    }
+                }
+            });
+
+        },
+        show: function() {
+            // Set the confirmation message from schema.
+            // If confirmation message is not defined, use a generic message.
+                let commandSchema = getCurrentCommandSchema(),
+                confirmation_message = gettext(commandSchema.confirmation_message);
+                if (confirmation_message === undefined){
+                    confirmation_message = interpolate(
+                        gettext(
+                            'Are you sure you want to %s this device?'
+                        ),
+                        [gettext(commandSchema.title.toLowerCase())]
+                    );
+                }
+                $('#ow-command-confirm-text').html(confirmation_message);
+
+                $('html').css('overflow-y', 'hidden');
+                $('#ow-command-confirm-dialog-wrapper').removeClass('ow-hide');
+                $('#ow-command-confirm-yes').focus();
+        },
+        hide: function() {
+            $('#ow-command-confirm-dialog-wrapper').addClass('ow-hide');
+        },
+        add: function() {
+            let confirmationElements = `
+                <div id="ow-command-confirm-dialog-wrapper" class="ow-hide">
+                    <div id="ow-command-confirm-dialog">
+                        <div id="ow-command-confirm-text"></div>
+                        <div id="ow-command-confirm-btn-wrapper">
+                            <button class="button" id="ow-command-confirm-yes">${gettext('Yes')}</button>
+                            <button class="button" id="ow-command-confirm-no">${gettext('No')}</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        $('#command_set-group').after(confirmationElements);
+        }
+    };
+
+    commandConfirmationDialog.init();
+
     // Add close button on the overlay
     $(function () {
         let elements = `
@@ -177,6 +251,22 @@ function initCommandOverlay($) {
         resetCommandForm();
     });
 
+    // Click handler for execute button
+    $('#command_set-group').on('click', '#ow-command-submit-btn', function (e) {
+        e.preventDefault();
+        if (!checkInputIsValid()) {
+            return;
+        }
+        if (!isUserConfirmationRequired()){
+            // If user confirmation is not required, then
+            // jump displaying confirmation dialog
+            $('#ow-command-confirm-yes').click();
+            return;
+        }
+
+        commandConfirmationDialog.show();
+    });
+
     function checkInputIsValid() {
         // Remove all error messages
         $('#id_command_set-0-input_jsoneditor .errorlist').removeClass('ow-command-errorlist');
@@ -200,12 +290,36 @@ function initCommandOverlay($) {
         return true;
     }
 
-    // Click handler for execute button
-    $('#command_set-group').on('click', '#ow-command-submit-btn', function (e) {
-        e.preventDefault();
-        if (!checkInputIsValid()) {
-            return;
+    function isUserConfirmationRequired() {
+        // User confirmation is required when
+        //      1. There are no input fields for a command
+        //      2. When it is mentioned in the schema
+
+        // Instead of counting input fields from DOM, count number of
+        // properties in schema to avoid miscalculation due to non input fields
+        // like drop down.
+
+        let inputsLength,
+            commandSchema = getCurrentCommandSchema(),
+            commandInputs = commandSchema.properties,
+            commandRequiresConfirmation = commandSchema.requires_confirmation;
+        try {
+            inputsLength = Object.keys(commandInputs).length;
         }
+        catch(e) {
+            inputsLength = 0;
+        }
+
+        return inputsLength === 0 || commandRequiresConfirmation === true;
+    }
+
+    // Click handler for command confirmation button
+    $('#device_form').on('click', '#ow-command-confirm-yes', function (e) {
+        e.preventDefault();
+
+        // Hide confirmation dialog
+        $('#ow-command-confirm-dialog-wrapper').addClass('ow-hide');
+
         let data = {
             "type": $('#id_command_set-0-type').val(),
             "input": $('#id_command_set-0-input').val()
@@ -278,8 +392,9 @@ function initCommandOverlay($) {
         $('#id_command_set-0-type').trigger('change');
         $('#command_set-group').css('display', 'none');
         $('.ow-command-overlay-errornote').addClass('ow-hide');
+        commandConfirmationDialog.hide();
         $('html').css('overflow-y', '');
-        // After closing the overaly, change focus to dropdown button
+        // After closing the overlay, change focus to dropdown button
         $('#send-command').focus();
     }
 
@@ -344,6 +459,12 @@ function initCommandOverlay($) {
             </div>`;
         }
     }
+
+    function getCurrentCommandSchema(){
+        let schema = django._schemas[$('#id_command_set-0-input').data('schema-url')],
+            commandType = $('#id_command_set-0-type').val();
+        return schema[commandType];
+    }
 }
 
 function initCommandWebSockets($) {
@@ -389,9 +510,7 @@ function initCommandWebSockets($) {
             commandObjectFieldset.addClass('object-updated');
             commandObjectFieldset.css('background-color', 'inherit');
         }, 0);
-
     });
-
 }
 
 // Utility functions

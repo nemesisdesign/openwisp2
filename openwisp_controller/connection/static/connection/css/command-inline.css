@@ -44,7 +44,7 @@ li.commands {
 }
 .ow-command-btn{
   font-size: 12px;
-  padding: 8px    10px;
+  padding: 8px 10px;
   border: 0.2em solid rgba(0, 0, 0, 0.05);
   font-weight: normal;
   cursor: pointer;
@@ -59,7 +59,8 @@ li.commands {
 
 
 /* Styles for Command execute form overaly */
-#command_set-group {
+#command_set-group,
+#ow-command-confirm-dialog-wrapper {
   position: absolute;
   top: 0px;
   z-index: 100;
@@ -69,7 +70,8 @@ li.commands {
   background-color: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(2px);
 }
-#command_set-group > fieldset{
+#command_set-group > fieldset,
+#ow-command-confirm-dialog {
   border: 2px black solid;
   box-shadow: 0px 0px 20px 10px #464646;
   position: relative;
@@ -85,7 +87,8 @@ li.commands {
   justify-content: center;
   padding: 5px 0px;
 }
-#ow-command-submit-btn {
+#ow-command-submit-btn,
+#ow-command-confirm-yes, #ow-command-confirm-no {
   padding: 10px 15px;
   margin-bottom: 10px;
   font-size: 13px;
@@ -93,7 +96,7 @@ li.commands {
 .ow-command-errorlist{
   display: inherit !important;
 }
-.ow-error-input{
+.ow-error-input {
   border: 1px #ba2121 solid;
 }
 #id_command_set-0-input_jsoneditor .errorlist{
@@ -116,6 +119,39 @@ li.commands {
 #ow-command-overlay-close:active{ outline: 0 none }
 #ow-command-overlay-close > img{
   height: 20px;
+}
+
+/* Styles for confirmation dialog element */
+#ow-command-confirm-dialog {
+  text-align: center;
+  background-color: #ffffff;
+}
+#ow-command-confirm-text {
+  color: #666;
+  font-family: "Roboto","Lucida Grande","DejaVu Sans","Bitstream Vera Sans",Verdana,Arial,sans-serif;
+  font-size: 14px;
+  font-weight: normal;
+  margin: 20px;
+}
+#ow-command-confirm-btn-wrapper button {
+  margin-bottom: 20px;
+}
+#ow-command-confirm-btn-wrapper button + button {
+  margin-left: 5px;
+}
+#ow-command-confirm-yes {
+  background-color: #498b26;
+}
+#ow-command-confirm-yes:hover,
+#ow-command-confirm-yes:focus {
+  background-color: #417927;
+}
+#ow-command-confirm-no {
+  background-color: #ba2121;
+}
+#ow-command-confirm-no:hover,
+#ow-command-confirm-no:focus {
+  background-color: #a41515;
 }
 
 @media screen and (max-width: 768px){
@@ -145,6 +181,9 @@ li.commands {
 
   #id_command_set-0-input_jsoneditor .form-row label{
     margin-left: 0px;
+  }
+  #id_command_set-0-input_jsoneditor .form-row{
+    display: block;
   }
   .ow-command-overlay-errornote{
     width: 80%;

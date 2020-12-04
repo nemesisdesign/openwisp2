@@ -14,7 +14,7 @@ const commandWebSocket = new ReconnectingWebSocket(
 django.jQuery(function ($) {
     let selector = $('#id_command_set-0-type'),
         showFields = function () {
-            var fields = $('#command_set-group fieldset > .form-row:not(.field-type):not(.field-params), .jsoneditor-wrapper'),
+            var fields = $('#command_set-group fieldset > .form-row:not(.field-type):not(.field-params), #command_set-group .jsoneditor-wrapper'),
                 value = selector.val();
             if (!value) {
                 fields.hide();

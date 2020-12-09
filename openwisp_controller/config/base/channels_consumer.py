@@ -48,6 +48,14 @@ class BaseConsumer(WebsocketConsumer):
             self.accept()
 
     def disconnect(self, close_code):
-        async_to_sync(self.channel_layer.group_discard)(
-            f'{self.channel_layer_group}-{self.pk_}', self.channel_name
-        )
+        try:
+            async_to_sync(self.channel_layer.group_discard)(
+                f'{self.channel_layer_group}-{self.pk_}', self.channel_name
+            )
+        except AttributeError:
+            # The "disconnect" method is called after the "close" method.
+            # Termination of a connection which was never accepted also
+            # triggers this method. "self.pk_" is only set for accepted
+            # connections, therefore an error is raised during termination
+            # of rejected connection requests which is handled by this block.
+            pass

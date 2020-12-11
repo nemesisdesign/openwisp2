@@ -27,7 +27,7 @@ django.jQuery(function ($) {
         showFields();
     });
 
-    $(document).one('jsonschema-schemaloaded', function () {
+    $('#id_command_set-0-input').one('jsonschema-schemaloaded', function () {
         showFields();
 
         initCommandDropdown($);

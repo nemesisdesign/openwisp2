@@ -39,7 +39,7 @@ class CreateDeviceMixin(object):
     def _create_device_config(self, device_opts=None, config_opts=None):
         device_opts = device_opts or {}
         config_opts = config_opts or {}
-        device_opts['name'] = 'test'
+        device_opts.setdefault('name', 'test')
         d = self._create_device(**device_opts)
         config_opts['device'] = d
         self._create_config(**config_opts)
@@ -79,6 +79,11 @@ class CreateTemplateMixin(object):
 class CreateVpnMixin(object):
     ca_model = Ca
     cert_model = Cert
+    _BACKENDS = {
+        'openvpn': 'openwisp_controller.vpn_backends.OpenVpn',
+        'wireguard': 'openwisp_controller.vpn_backends.Wireguard',
+        'vxlan': 'openwisp_controller.vpn_backends.VxlanWireguard',
+    }
 
     _dh = """-----BEGIN DH PARAMETERS-----
 MIIBCAKCAQEAqzVRdXJ/R4L/sq0bhgCXnFy9M5lOYkux9SIoe8hvrcqNAvJu/V+g
@@ -113,13 +118,12 @@ UqzLuoNWCyj8KCicbA7tiBxX+2zgQpch8wIBAg==
         options = dict(
             name='test',
             host='vpn1.test.com',
-            ca=None,
-            backend='openwisp_controller.vpn_backends.OpenVpn',
+            backend=self._BACKENDS['openvpn'],
             config=self._vpn_config,
             dh=self._dh,
         )
         options.update(**kwargs)
-        if not options['ca']:
+        if 'ca' not in options:
             options['ca'] = self._create_ca(**ca_options)
         vpn = Vpn(**options)
         vpn.full_clean()

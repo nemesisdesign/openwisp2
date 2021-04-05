@@ -73,15 +73,15 @@ class AbstractTemplate(ShareableOrgMixinUniqueName, BaseConfig):
             'be required for every device in the system)'
         ),
     )
+    # auto_cert naming kept for backward compatibility
     auto_cert = models.BooleanField(
-        _('auto certificate'),
+        _('automatic tunnel provisioning'),
         default=default_auto_cert,
         db_index=True,
         help_text=_(
-            'whether x509 client certificates should '
-            'be automatically managed behind the scenes '
-            'for each configuration using this template, '
-            'valid only for the VPN type'
+            'whether tunnel specific configuration (cryptographic keys, ip addresses, '
+            'etc) should be automatically generated and managed behind the scenes '
+            'for each configuration using this template, valid only for the VPN type'
         ),
     )
     default_values = JSONField(

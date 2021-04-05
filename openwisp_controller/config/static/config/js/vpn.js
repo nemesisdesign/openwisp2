@@ -1,5 +1,10 @@
 'use strict';
 django.jQuery(function ($) {
+    // clean config when VPN backend is changed
+    $('#id_backend').change(function() {
+        $('#id_config').val('{}');
+    });
+
     if (!$('.add-form').length) {
         return;
     }

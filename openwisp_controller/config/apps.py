@@ -71,6 +71,11 @@ class ConfigConfig(AppConfig):
             sender=self.config_model.templates.through,
             dispatch_uid='template.enforce_required_template',
         )
+        post_save.connect(
+            self.vpnclient_model.post_save,
+            sender=self.vpnclient_model,
+            dispatch_uid='vpnclient.post_save',
+        )
         post_delete.connect(
             self.vpnclient_model.post_delete,
             sender=self.vpnclient_model,

@@ -431,20 +431,22 @@ class AbstractConfig(BaseConfig):
             vpn = vpnclient.vpn
             vpn_id = vpn.pk.hex
             context_keys = vpn._get_auto_context_keys()
-            ca = vpn.ca
             cert = vpnclient.cert
-            # CA
-            ca_filename = 'ca-{0}-{1}.pem'.format(
-                ca.pk, ca.common_name.replace(' ', '_')
-            )
-            ca_path = '{0}/{1}'.format(app_settings.CERT_PATH, ca_filename)
-            # update context
-            c.update(
-                {
-                    context_keys['ca_path']: ca_path,
-                    context_keys['ca_contents']: ca.certificate,
-                }
-            )
+            c[context_keys['vpn_host']] = vpn.host
+            if vpn.ca:
+                ca = vpn.ca
+                # CA
+                ca_filename = 'ca-{0}-{1}.pem'.format(
+                    ca.pk, ca.common_name.replace(' ', '_')
+                )
+                ca_path = '{0}/{1}'.format(app_settings.CERT_PATH, ca_filename)
+                # update context
+                c.update(
+                    {
+                        context_keys['ca_path']: ca_path,
+                        context_keys['ca_contents']: ca.certificate,
+                    }
+                )
             # conditional needed for VPN without x509 authentication
             # eg: simple password authentication
             if cert:
@@ -463,6 +465,22 @@ class AbstractConfig(BaseConfig):
                         context_keys['key_contents']: cert.private_key,
                     }
                 )
+            if vpn.public_key:
+                c[context_keys['pub_key']] = vpn.public_key
+            if vpnclient.public_key:
+                c['public_key'] = vpnclient.public_key
+            if vpnclient.private_key:
+                c['private_key'] = vpnclient.private_key
+            if vpn.subnet:
+                if vpnclient.ip:
+                    c[context_keys['ip_address']] = vpnclient.ip.ip_address
+            if vpn.ip:
+                c[context_keys['server_ip_address']] = vpn.ip.ip_address
+                c[
+                    context_keys['server_ip_max_prefix']
+                ] = f'{vpn.ip.ip_address}/{vpn.subnet.subnet.max_prefixlen}'
+            if 'vni' in context_keys and vpnclient.vni:
+                c[context_keys['vni']] = f'{vpnclient.vni}'
         return c
 
     def get_subnet_division_context(self):

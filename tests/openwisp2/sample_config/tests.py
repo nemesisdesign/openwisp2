@@ -20,6 +20,8 @@ from openwisp_controller.config.tests.test_vpn import TestVpn as BaseTestVpn
 from openwisp_controller.config.tests.test_vpn import (
     TestVpnTransaction as BaseTestVpnTransaction,
 )
+from openwisp_controller.config.tests.test_vpn import TestVxlan as BaseTestVxlan
+from openwisp_controller.config.tests.test_vpn import TestWireguard as BaseTestWireguard
 
 
 class TestAdmin(BaseTestAdmin):
@@ -70,6 +72,14 @@ class TestApps(BaseTestApps):
     pass
 
 
+class TestWireguard(BaseTestWireguard):
+    pass
+
+
+class TestVxlan(BaseTestVxlan):
+    pass
+
+
 del BaseTestAdmin
 del BaseTestConfig
 del BaseTestController
@@ -82,3 +92,5 @@ del BaseTestViews
 del BaseTestVpn
 del BaseTestVpnTransaction
 del BaseTestApps
+del BaseTestWireguard
+del BaseTestVxlan

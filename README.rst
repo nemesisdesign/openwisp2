@@ -135,7 +135,8 @@ Config App
 * `configuration variables <#how-to-use-configuration-variables>`_: reference ansible-like variables in the configuration and templates
 * **template tags**: tag templates to automate different types of auto-configurations (eg: mesh, WDS, 4G)
 * **simple HTTP resources**: allow devices to automatically download configuration updates
-* **VPN management**: automatically provision VPN tunnels with unique x509 certificates
+* **VPN management**: `automatically provision VPN tunnels <#openwisp-controller-default-auto-cert>`_,
+  including cryptographic keys, IP addresses
 
 PKI App
 ~~~~~~~
@@ -465,10 +466,23 @@ of OpenWISP, see `netjsonconfig context: configuration variables
 The default value of the ``auto_cert`` field for new ``Template`` objects.
 
 The ``auto_cert`` field is valid only for templates which have ``type``
-set to ``VPN`` and indicates whether a new x509 certificate should be created
-automatically for each configuration using that template.
+set to ``VPN`` and indicates whether configuration regarding the VPN tunnel is
+provisioned automatically to each device using the template, eg:
 
-The automatically created certificates will also be removed when they are not
+- when using OpenVPN, new `x509 <https://tools.ietf.org/html/rfc5280>`_ certificates
+  will be generated automatically using the same CA assigned to the related VPN object
+- when using Wireguard, new pair of private and public keys
+  (using `Curve25519 <http://cr.yp.to/ecdh.html>`_) will be generated, as well as
+  an IP address of the subnet assigned to the related VPN object
+- when using `VXLAN <https://tools.ietf.org/html/rfc7348>`_ tunnels over Wireguad,
+  in addition to the configuration generated for Wireguard, a new VID will be generated
+  automatically for each device if the configuration option "auto VNI" is turned on in
+  the VPN object
+
+All these auto generated configuration options will be available as
+template variables.
+
+The objects that are automatically created will also be removed when they are not
 needed anymore (eg: when the VPN template is removed from a configuration object).
 
 ``OPENWISP_CONTROLLER_CERT_PATH``

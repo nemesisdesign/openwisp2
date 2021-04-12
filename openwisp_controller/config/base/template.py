@@ -2,7 +2,7 @@ import json
 from collections import OrderedDict
 from copy import copy
 
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
 from django.utils.translation import ugettext_lazy as _
 from jsonfield import JSONField
@@ -185,6 +185,10 @@ class AbstractTemplate(ShareableOrgMixinUniqueName, BaseConfig):
 
     def get_system_context(self):
         system_context = self.get_context(system=True)
+        try:
+            system_context.update(self.vpn.get_vpn_server_context())
+        except (ObjectDoesNotExist, AttributeError):
+            pass
         return OrderedDict(sorted(system_context.items()))
 
     def clone(self, user):

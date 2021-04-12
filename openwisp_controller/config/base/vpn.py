@@ -219,6 +219,33 @@ class AbstractVpn(ShareableOrgMixinUniqueName, BaseConfig):
         c.update(sorted(super().get_context().items()))
         return c
 
+    def get_vpn_server_context(self):
+        context = {}
+        context_keys = self._get_auto_context_keys()
+        if self.host:
+            context[context_keys['vpn_host']] = self.host
+        if self.ca:
+            ca = self.ca
+            # CA
+            ca_filename = 'ca-{0}-{1}.pem'.format(
+                ca.pk, ca.common_name.replace(' ', '_')
+            )
+            ca_path = '{0}/{1}'.format(app_settings.CERT_PATH, ca_filename)
+            context.update(
+                {
+                    context_keys['ca_path']: ca_path,
+                    context_keys['ca_contents']: ca.certificate,
+                }
+            )
+        if self.public_key:
+            context[context_keys['pub_key']] = self.public_key
+        if self.ip:
+            context[context_keys['server_ip_address']] = self.ip.ip_address
+            context[
+                context_keys['server_ip_max_prefix']
+            ] = f'{self.ip.ip_address}/{self.subnet.subnet.max_prefixlen}'
+        return context
+
     def get_system_context(self):
         return self.get_context()
 

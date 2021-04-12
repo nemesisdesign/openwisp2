@@ -667,6 +667,7 @@ class VpnAdmin(
     search_fields = ['id', 'name', 'host', 'key']
     readonly_fields = ['id', 'uuid', 'system_context']
     multitenant_shared_relations = ('ca', 'cert', 'subnet')
+    autocomplete_fields = ['ip', 'subnet']
     fields = [
         'organization',
         'name',

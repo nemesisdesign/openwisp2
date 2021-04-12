@@ -615,9 +615,3 @@ class AbstractVpnClient(models.Model):
         if not self.vpn.subnet:
             return
         self.ip = self.vpn.subnet.request_ip()
-        try:
-            self.ip.full_clean()
-            self.ip.save()
-        except Exception:
-            raise
-            logger.exception('Got exception while creating device ip')

@@ -325,10 +325,10 @@ class AbstractVpn(ShareableOrgMixinUniqueName, BaseConfig):
             if not auto_cert:
                 for key in ['cert_path', 'cert_contents', 'key_path', 'key_contents']:
                     del context_keys[key]
-            conifg_dict_key = self.backend_class.__name__.lower()
+            config_dict_key = self.backend_class.__name__.lower()
             context_keys.pop('vpn_host', None)
             auto = backend.auto_client(
-                host=self.host, server=self.config[conifg_dict_key][0], **context_keys
+                host=self.host, server=self.config[config_dict_key][0], **context_keys
             )
             config.update(auto)
         return config

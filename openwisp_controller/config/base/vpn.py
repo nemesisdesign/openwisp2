@@ -307,7 +307,7 @@ class AbstractVpn(ShareableOrgMixinUniqueName, BaseConfig):
             )
         return context_keys
 
-    def auto_client(self, auto_cert=True):
+    def auto_client(self, auto_cert=True, template_backend_class=None):
         """
         calls backend ``auto_client`` method and returns a configuration
         dictionary that is suitable to be used as a template
@@ -327,9 +327,18 @@ class AbstractVpn(ShareableOrgMixinUniqueName, BaseConfig):
                     del context_keys[key]
             config_dict_key = self.backend_class.__name__.lower()
             context_keys.pop('vpn_host', None)
-            auto = backend.auto_client(
-                host=self.host, server=self.config[config_dict_key][0], **context_keys
-            )
+            if self._is_backend_type('wireguard') and template_backend_class:
+                auto = template_backend_class.wireguard_auto_client(
+                    host=self.host,
+                    server=self.config[config_dict_key][0],
+                    **context_keys,
+                )
+            else:
+                auto = backend.auto_client(
+                    host=self.host,
+                    server=self.config[config_dict_key][0],
+                    **context_keys,
+                )
             config.update(auto)
         return config
 

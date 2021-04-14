@@ -169,7 +169,9 @@ class AbstractTemplate(ShareableOrgMixinUniqueName, BaseConfig):
             self.vpn = None
             self.auto_cert = False
         if self.type == 'vpn' and not self.config:
-            self.config = self.vpn.auto_client(auto_cert=self.auto_cert)
+            self.config = self.vpn.auto_client(
+                auto_cert=self.auto_cert, template_backend_class=self.backend_class
+            )
         if self.required and not self.default:
             self.default = True
         super().clean(*args, **kwargs)

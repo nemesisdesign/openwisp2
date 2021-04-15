@@ -328,10 +328,11 @@ class AbstractVpn(ShareableOrgMixinUniqueName, BaseConfig):
             config_dict_key = self.backend_class.__name__.lower()
             context_keys.pop('vpn_host', None)
             if self._is_backend_type('wireguard') and template_backend_class:
-                auto = template_backend_class.wireguard_auto_client(
-                    host=self.host,
-                    server=self.config[config_dict_key][0],
-                    **context_keys,
+                vpn_auto_client = '{}wireguard_auto_client'.format(
+                    'vxlan_' if self._is_backend_type('vxlan') else ''
+                )
+                auto = getattr(template_backend_class, vpn_auto_client)(
+                    host=self.host, server=self.config['wireguard'][0], **context_keys,
                 )
             else:
                 auto = backend.auto_client(

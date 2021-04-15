@@ -415,6 +415,7 @@ class DeviceAdmin(MultitenantAdminMixin, BaseConfigAdmin, UUIDAdmin):
         'modified',
     ]
     inlines = [ConfigInline]
+    conditional_inlines = []
 
     org_position = 1 if not app_settings.HARDWARE_ID_ENABLED else 2
     list_display.insert(org_position, 'organization')
@@ -468,7 +469,7 @@ class DeviceAdmin(MultitenantAdminMixin, BaseConfigAdmin, UUIDAdmin):
         return c
 
     def get_urls(self):
-        return [
+        urls = [
             url(
                 r'^config/get-default-templates/(?P<organization_id>[^/]+)/$',
                 self.admin_site.admin_view(get_default_templates),
@@ -480,6 +481,12 @@ class DeviceAdmin(MultitenantAdminMixin, BaseConfigAdmin, UUIDAdmin):
                 name='get_template_default_values',
             ),
         ] + super().get_urls()
+        for inline in self.inlines + self.conditional_inlines:
+            try:
+                urls.extend(inline(self, self.admin_site).get_urls())
+            except AttributeError:
+                pass
+        return urls
 
     def get_extra_context(self, pk=None):
         ctx = super().get_extra_context(pk)
@@ -495,6 +502,19 @@ class DeviceAdmin(MultitenantAdminMixin, BaseConfigAdmin, UUIDAdmin):
     def add_view(self, request, form_url='', extra_context=None):
         extra_context = self.get_extra_context()
         return super().add_view(request, form_url, extra_context)
+
+    def get_inlines(self, request, obj):
+        inlines = super().get_inlines(request, obj)
+        # this only makes sense in existing devices
+        if not obj:
+            return inlines
+        # add conditional_inlines if condition is met
+        inlines = list(inlines)  # copy
+        for inline in self.conditional_inlines:
+            inline_instance = inline(inline.model, admin.site)
+            if inline_instance._get_conditional_queryset(request, obj=obj):
+                inlines.append(inline)
+        return inlines
 
 
 class CloneOrganizationForm(forms.Form):

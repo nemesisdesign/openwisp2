@@ -1,6 +1,7 @@
 from copy import deepcopy
 
 from netjsonconfig import OpenVpn as BaseOpenVpn
+from netjsonconfig import VxlanWireguard as BaseVxlanWireguard
 from netjsonconfig import Wireguard as BaseWireguard
 
 # adapt OpenVPN schema in order to limit it to 1 item only
@@ -62,7 +63,9 @@ class Wireguard(BaseWireguard):
     schema = limited_wireguard_schema
 
 
-class VxlanWireguard(Wireguard):
+class VxlanWireguard(BaseVxlanWireguard):
     """
     VXLAN over Wireguard
     """
+
+    schema = limited_wireguard_schema

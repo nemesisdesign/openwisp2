@@ -107,7 +107,8 @@ UqzLuoNWCyj8KCicbA7tiBxX+2zgQpch8wIBAg==
                 'proto': 'udp',
                 'tls_server': True,
             }
-        ]
+        ],
+        'wireguard': [{'name': 'wg0', 'port': 51820}],
     }
 
     @mock.patch(

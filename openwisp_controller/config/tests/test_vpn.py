@@ -624,6 +624,17 @@ class TestWireguard(BaseTestVpn, TestCase):
             self.assertIn('wireguard', str(context_manager.exception))
             self.assertIn('is a required property', str(context_manager.exception))
 
+    def test_auto_client(self):
+        device, vpn, template = self._create_wireguard_vpn_template()
+        auto = vpn.auto_client(template_backend_class=template.backend_class)
+        context_keys = vpn._get_auto_context_keys()
+        for key in context_keys.keys():
+            context_keys[key] = '{{%s}}' % context_keys[key]
+        expected = template.backend_class.wireguard_auto_client(
+            host=vpn.host, server=self._vpn_config['wireguard'][0], **context_keys
+        )
+        self.assertEqual(auto, expected)
+
 
 class TestVxlan(BaseTestVpn, TestCase):
     def _create_vxlan_tunnel(self, config=None):
@@ -782,3 +793,14 @@ class TestVxlan(BaseTestVpn, TestCase):
                 'Invalid configuration triggered by "#/wireguard"',
                 str(context_manager.exception),
             )
+
+    def test_auto_client(self):
+        device, vpn, template = self._create_vxlan_vpn_template()
+        auto = vpn.auto_client(template_backend_class=template.backend_class)
+        context_keys = vpn._get_auto_context_keys()
+        for key in context_keys.keys():
+            context_keys[key] = '{{%s}}' % context_keys[key]
+        expected = template.backend_class.vxlan_wireguard_auto_client(
+            host=vpn.host, server=self._vpn_config['wireguard'][0], **context_keys
+        )
+        self.assertEqual(auto, expected)

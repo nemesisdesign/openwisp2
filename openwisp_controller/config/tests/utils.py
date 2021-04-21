@@ -132,6 +132,76 @@ UqzLuoNWCyj8KCicbA7tiBxX+2zgQpch8wIBAg==
         return vpn
 
 
+class TestWireguardVpnMixin:
+    def _create_wireguard_vpn(self, config=None):
+        if config is None:
+            config = {'wireguard': [{'name': 'wg0', 'port': 51820}]}
+        org1 = self._get_org()
+        subnet = self._create_subnet(
+            name='wireguard test', subnet='10.0.0.0/16', organization=org1
+        )
+        subnet.refresh_from_db()
+        vpn = self._create_vpn(
+            organization=org1,
+            backend=self._BACKENDS['wireguard'],
+            config=config,
+            subnet=subnet,
+            ca=None,
+            cert=None,
+        )
+        self.assertIsNone(vpn.ca)
+        self.assertIsNone(vpn.cert)
+        self.assertIsNotNone(vpn.ip)
+        self.assertEqual(vpn.ip.ip_address, '10.0.0.1')
+        return vpn
+
+    def _create_wireguard_vpn_template(self, auto_cert=True):
+        vpn = self._create_wireguard_vpn()
+        org1 = vpn.organization
+        template = self._create_template(
+            name='wireguard',
+            type='vpn',
+            vpn=vpn,
+            organization=org1,
+            auto_cert=auto_cert,
+        )
+        device = self._create_device_config()
+        device.config.templates.add(template)
+        return device, vpn, template
+
+
+class TestVxlanWireguardVpnMixin:
+    def _create_vxlan_tunnel(self, config=None):
+        if config is None:
+            config = {'wireguard': [{'name': 'wg0', 'port': 51820}]}
+        org = self._get_org()
+        subnet = self._create_subnet(
+            name='wireguard test', subnet='10.0.0.0/16', organization=org
+        )
+        tunnel = self._create_vpn(
+            organization=org,
+            backend=self._BACKENDS['vxlan'],
+            config=config,
+            subnet=subnet,
+            ca=None,
+        )
+        return tunnel, subnet
+
+    def _create_vxlan_vpn_template(self):
+        vpn, subnet = self._create_vxlan_tunnel()
+        org1 = vpn.organization
+        template = self._create_template(
+            name='vxlan-wireguard',
+            type='vpn',
+            vpn=vpn,
+            organization=org1,
+            auto_cert=True,
+        )
+        device = self._create_device_config()
+        device.config.templates.add(template)
+        return device, vpn, template
+
+
 class TestVpnX509Mixin(CreateVpnMixin, TestPkiMixin):
     def _create_vpn(self, ca_options={}, **kwargs):
         if 'ca' not in kwargs:

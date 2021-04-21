@@ -3,6 +3,8 @@ from unittest import mock
 
 from celery.exceptions import SoftTimeLimitExceeded
 from django.core.exceptions import ValidationError
+from django.db.models.signals import post_save
+from django.http.response import HttpResponse, HttpResponseNotFound
 from django.test import TestCase, TransactionTestCase
 from openwisp_ipam.tests import CreateModelsMixin as CreateIpamModelsMixin
 from swapper import load_model
@@ -10,7 +12,12 @@ from swapper import load_model
 from ...vpn_backends import OpenVpn
 from .. import settings as app_settings
 from ..tasks import create_vpn_dh
-from .utils import CreateConfigTemplateMixin, TestVpnX509Mixin
+from .utils import (
+    CreateConfigTemplateMixin,
+    TestVpnX509Mixin,
+    TestVxlanWireguardVpnMixin,
+    TestWireguardVpnMixin,
+)
 
 Config = load_model('config', 'Config')
 Device = load_model('config', 'Device')
@@ -462,43 +469,7 @@ class TestVpnTransaction(BaseTestVpn, TransactionTestCase):
         dhparam.assert_called_once()
 
 
-class TestWireguard(BaseTestVpn, TestCase):
-    def _create_wireguard_vpn(self, config=None):
-        if config is None:
-            config = {'wireguard': [{'name': 'wg0', 'port': 51820}]}
-        org1 = self._get_org()
-        subnet = self._create_subnet(
-            name='wireguard test', subnet='10.0.0.0/16', organization=org1
-        )
-        subnet.refresh_from_db()
-        vpn = self._create_vpn(
-            organization=org1,
-            backend=self._BACKENDS['wireguard'],
-            config=config,
-            subnet=subnet,
-            ca=None,
-            cert=None,
-        )
-        self.assertIsNone(vpn.ca)
-        self.assertIsNone(vpn.cert)
-        self.assertIsNotNone(vpn.ip)
-        self.assertEqual(vpn.ip.ip_address, '10.0.0.1')
-        return vpn
-
-    def _create_wireguard_vpn_template(self, auto_cert=True):
-        vpn = self._create_wireguard_vpn()
-        org1 = vpn.organization
-        template = self._create_template(
-            name='wireguard',
-            type='vpn',
-            vpn=vpn,
-            organization=org1,
-            auto_cert=auto_cert,
-        )
-        device = self._create_device_config()
-        device.config.templates.add(template)
-        return device, vpn, template
-
+class TestWireguard(BaseTestVpn, TestWireguardVpnMixin, TestCase):
     def test_wireguard_config_creation(self):
         vpn = self._create_wireguard_vpn()
 
@@ -534,6 +505,50 @@ class TestWireguard(BaseTestVpn, TestCase):
         self.assertEqual(vpnclient.private_key, '')
         self.assertEqual(vpnclient.public_key, '')
 
+    def test_ip_deleted_when_vpnclient_deleted(self):
+        device, vpn, template = self._create_wireguard_vpn_template()
+        self.assertEqual(IpAddress.objects.count(), 2)
+        vpnclient_qs = device.config.vpnclient_set
+        self.assertEqual(vpnclient_qs.count(), 1)
+        vpnclient_qs.first().delete()
+        self.assertEqual(IpAddress.objects.count(), 1)
+
+    def test_ip_deleted_when_device_deleted(self):
+        device, vpn, template = self._create_wireguard_vpn_template()
+        self.assertEqual(device.config.vpnclient_set.count(), 1)
+        device.delete()
+        self.assertEqual(IpAddress.objects.count(), 1)
+
+    def test_wireguard_schema(self):
+        with self.subTest('wireguard schema shall be valid'):
+            with self.assertRaises(ValidationError) as context_manager:
+                self._create_wireguard_vpn(config={'wireguard': []})
+            self.assertIn(
+                'Invalid configuration triggered by "#/wireguard"',
+                str(context_manager.exception),
+            )
+            # delete subnet created for previous assertion
+            Subnet.objects.all().delete()
+
+        with self.subTest('wireguard property shall be present'):
+            with self.assertRaises(ValidationError) as context_manager:
+                self._create_wireguard_vpn(config={})
+            self.assertIn('wireguard', str(context_manager.exception))
+            self.assertIn('is a required property', str(context_manager.exception))
+
+    def test_auto_client(self):
+        device, vpn, template = self._create_wireguard_vpn_template()
+        auto = vpn.auto_client(template_backend_class=template.backend_class)
+        context_keys = vpn._get_auto_context_keys()
+        for key in context_keys.keys():
+            context_keys[key] = '{{%s}}' % context_keys[key]
+        expected = template.backend_class.wireguard_auto_client(
+            host=vpn.host, server=self._vpn_config['wireguard'][0], **context_keys
+        )
+        self.assertEqual(auto, expected)
+
+
+class TestWireguardTransaction(BaseTestVpn, TestWireguardVpnMixin, TransactionTestCase):
     def test_auto_peer_configuration(self):
         self.assertEqual(IpAddress.objects.count(), 0)
         device, vpn, template = self._create_wireguard_vpn_template()
@@ -593,80 +608,36 @@ class TestWireguard(BaseTestVpn, TestCase):
             self.assertEqual(config['wireguard'][0]['name'], 'wg2')
             self.assertEqual(config['wireguard'][0]['port'], 51821)
 
-    def test_ip_deleted_when_vpnclient_deleted(self):
+    def test_update_vpn_server_configuration(self):
         device, vpn, template = self._create_wireguard_vpn_template()
-        self.assertEqual(IpAddress.objects.count(), 2)
-        vpnclient_qs = device.config.vpnclient_set
-        self.assertEqual(vpnclient_qs.count(), 1)
-        vpnclient_qs.first().delete()
-        self.assertEqual(IpAddress.objects.count(), 1)
+        vpn_client = device.config.vpnclient_set.first()
+        vpn.webhook_endpoint = 'https://example.com'
+        vpn.auth_token = 'super-secret-token'
+        vpn.save()
 
-    def test_ip_deleted_when_device_deleted(self):
-        device, vpn, template = self._create_wireguard_vpn_template()
-        self.assertEqual(device.config.vpnclient_set.count(), 1)
-        device.delete()
-        self.assertEqual(IpAddress.objects.count(), 1)
-
-    def test_wireguard_schema(self):
-        with self.subTest('wireguard schema shall be valid'):
-            with self.assertRaises(ValidationError) as context_manager:
-                self._create_wireguard_vpn(config={'wireguard': []})
-            self.assertIn(
-                'Invalid configuration triggered by "#/wireguard"',
-                str(context_manager.exception),
+        with mock.patch('logging.Logger.info') as mocked_logger, mock.patch(
+            'requests.post', return_value=HttpResponse()
+        ):
+            post_save.send(
+                instance=vpn_client, sender=vpn_client._meta.model, created=False
             )
-            # delete subnet created for previous assertion
-            Subnet.objects.all().delete()
+            mocked_logger.assert_called_once_with(
+                f'Triggered update webhook of VPN Server UUID: {vpn.pk}'
+            )
 
-        with self.subTest('wireguard property shall be present'):
-            with self.assertRaises(ValidationError) as context_manager:
-                self._create_wireguard_vpn(config={})
-            self.assertIn('wireguard', str(context_manager.exception))
-            self.assertIn('is a required property', str(context_manager.exception))
-
-    def test_auto_client(self):
-        device, vpn, template = self._create_wireguard_vpn_template()
-        auto = vpn.auto_client(template_backend_class=template.backend_class)
-        context_keys = vpn._get_auto_context_keys()
-        for key in context_keys.keys():
-            context_keys[key] = '{{%s}}' % context_keys[key]
-        expected = template.backend_class.wireguard_auto_client(
-            host=vpn.host, server=self._vpn_config['wireguard'][0], **context_keys
-        )
-        self.assertEqual(auto, expected)
+        with mock.patch('logging.Logger.error') as mocked_logger, mock.patch(
+            'requests.post', return_value=HttpResponseNotFound()
+        ):
+            post_save.send(
+                instance=vpn_client, sender=vpn_client._meta.model, created=False
+            )
+            mocked_logger.assert_called_once_with(
+                'Failed to update VPN Server configuration. '
+                f'Response status code: 404, VPN Server UUID: {vpn.pk}'
+            )
 
 
-class TestVxlan(BaseTestVpn, TestCase):
-    def _create_vxlan_tunnel(self, config=None):
-        if config is None:
-            config = {'wireguard': [{'name': 'wg0', 'port': 51820}]}
-        org = self._get_org()
-        subnet = self._create_subnet(
-            name='wireguard test', subnet='10.0.0.0/16', organization=org
-        )
-        tunnel = self._create_vpn(
-            organization=org,
-            backend=self._BACKENDS['vxlan'],
-            config=config,
-            subnet=subnet,
-            ca=None,
-        )
-        return tunnel, subnet
-
-    def _create_vxlan_vpn_template(self):
-        vpn, subnet = self._create_vxlan_tunnel()
-        org1 = vpn.organization
-        template = self._create_template(
-            name='vxlan-wireguard',
-            type='vpn',
-            vpn=vpn,
-            organization=org1,
-            auto_cert=True,
-        )
-        device = self._create_device_config()
-        device.config.templates.add(template)
-        return device, vpn, template
-
+class TestVxlan(BaseTestVpn, TestVxlanWireguardVpnMixin, TestCase):
     def test_vxlan_config_creation(self):
         tunnel, subnet = self._create_vxlan_tunnel()
         with self.subTest('vni 1'):
@@ -709,6 +680,55 @@ class TestVxlan(BaseTestVpn, TestCase):
             client.refresh_from_db()
             self.assertEqual(client.vni, None)
 
+    def test_vxlan_vni_conflict(self):
+        tunnel, subnet = self._create_vxlan_tunnel()
+        d1 = self._create_device()
+        c1 = self._create_config(device=d1)
+        client = VpnClient(vpn=tunnel, config=c1, vni=1)
+        client.full_clean()
+        client.save()
+        with self.subTest('vni with same ID should fail'):
+            d2 = self._create_device(name='d2', mac_address='16:DB:7F:E8:50:01')
+            c2 = self._create_config(device=d2)
+            client = VpnClient(vpn=tunnel, config=c2, vni=1)
+            with self.assertRaises(ValidationError) as context_manager:
+                client.full_clean()
+            message_dict = context_manager.exception.message_dict
+            self.assertIn('__all__', message_dict)
+            self.assertEqual(
+                message_dict['__all__'],
+                ['VPN client with this Vpn and Vni already exists.'],
+            )
+
+    def test_vxlan_schema(self):
+        with self.assertRaises(ValidationError) as context_manager:
+            self._create_vxlan_tunnel(config={'wireguard': []})
+            self.assertIn(
+                'Invalid configuration triggered by "#/wireguard"',
+                str(context_manager.exception),
+            )
+        with self.assertRaises(ValidationError) as context_manager:
+            self._create_vxlan_tunnel(config={})
+            self.assertIn(
+                'Invalid configuration triggered by "#/wireguard"',
+                str(context_manager.exception),
+            )
+
+    def test_auto_client(self):
+        device, vpn, template = self._create_vxlan_vpn_template()
+        auto = vpn.auto_client(template_backend_class=template.backend_class)
+        context_keys = vpn._get_auto_context_keys()
+        for key in context_keys.keys():
+            context_keys[key] = '{{%s}}' % context_keys[key]
+        expected = template.backend_class.vxlan_wireguard_auto_client(
+            host=vpn.host, server=self._vpn_config['wireguard'][0], **context_keys
+        )
+        self.assertEqual(auto, expected)
+
+
+class TestVxlanTransaction(
+    BaseTestVpn, TestVxlanWireguardVpnMixin, TransactionTestCase
+):
     def test_auto_peer_configuration(self):
         self.assertEqual(IpAddress.objects.count(), 0)
         device, vpn, template = self._create_vxlan_vpn_template()
@@ -759,48 +779,3 @@ class TestVxlan(BaseTestVpn, TestCase):
                 config = vpn.get_config()
             self.assertEqual(config['wireguard'][0]['name'], 'wg2')
             self.assertEqual(config['wireguard'][0]['port'], 51821)
-
-    def test_vxlan_vni_conflict(self):
-        tunnel, subnet = self._create_vxlan_tunnel()
-        d1 = self._create_device()
-        c1 = self._create_config(device=d1)
-        client = VpnClient(vpn=tunnel, config=c1, vni=1)
-        client.full_clean()
-        client.save()
-        with self.subTest('vni with same ID should fail'):
-            d2 = self._create_device(name='d2', mac_address='16:DB:7F:E8:50:01')
-            c2 = self._create_config(device=d2)
-            client = VpnClient(vpn=tunnel, config=c2, vni=1)
-            with self.assertRaises(ValidationError) as context_manager:
-                client.full_clean()
-            message_dict = context_manager.exception.message_dict
-            self.assertIn('__all__', message_dict)
-            self.assertEqual(
-                message_dict['__all__'],
-                ['VPN client with this Vpn and Vni already exists.'],
-            )
-
-    def test_vxlan_schema(self):
-        with self.assertRaises(ValidationError) as context_manager:
-            self._create_vxlan_tunnel(config={'wireguard': []})
-            self.assertIn(
-                'Invalid configuration triggered by "#/wireguard"',
-                str(context_manager.exception),
-            )
-        with self.assertRaises(ValidationError) as context_manager:
-            self._create_vxlan_tunnel(config={})
-            self.assertIn(
-                'Invalid configuration triggered by "#/wireguard"',
-                str(context_manager.exception),
-            )
-
-    def test_auto_client(self):
-        device, vpn, template = self._create_vxlan_vpn_template()
-        auto = vpn.auto_client(template_backend_class=template.backend_class)
-        context_keys = vpn._get_auto_context_keys()
-        for key in context_keys.keys():
-            context_keys[key] = '{{%s}}' % context_keys[key]
-        expected = template.backend_class.vxlan_wireguard_auto_client(
-            host=vpn.host, server=self._vpn_config['wireguard'][0], **context_keys
-        )
-        self.assertEqual(auto, expected)

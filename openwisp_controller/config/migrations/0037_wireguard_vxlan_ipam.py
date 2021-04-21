@@ -54,6 +54,31 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.AddField(
+            model_name='vpn',
+            name='auth_token',
+            field=models.CharField(
+                blank=True,
+                help_text=('Authentication token for triggering "Webhook Endpoint"'),
+                max_length=128,
+                null=True,
+                verbose_name='Webhook AuthToken',
+            ),
+        ),
+        migrations.AddField(
+            model_name='vpn',
+            name='webhook_endpoint',
+            field=models.CharField(
+                blank=True,
+                help_text=(
+                    'Webhook to trigger for updating server configuration '
+                    '(e.g. https://openwisp2.mydomain.com:8081/trigger-update)'
+                ),
+                max_length=128,
+                null=True,
+                verbose_name='Webhook Endpoint',
+            ),
+        ),
+        migrations.AddField(
             model_name='vpnclient',
             name='private_key',
             field=models.CharField(blank=True, max_length=44),

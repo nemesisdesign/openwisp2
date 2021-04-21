@@ -334,6 +334,31 @@ class Migration(migrations.Migration):
                         verbose_name='Subnet',
                     ),
                 ),
+                (
+                    'auth_token',
+                    models.CharField(
+                        blank=True,
+                        help_text=(
+                            'Authentication token for triggering "Webhook Endpoint"'
+                        ),
+                        max_length=128,
+                        null=True,
+                        verbose_name='Webhook AuthToken',
+                    ),
+                ),
+                (
+                    'webhook_endpoint',
+                    models.CharField(
+                        blank=True,
+                        help_text=(
+                            'Webhook to trigger for updating server configuration '
+                            '(e.g. https://openwisp2.mydomain.com:8081/trigger-update)'
+                        ),
+                        max_length=128,
+                        null=True,
+                        verbose_name='Webhook Endpoint',
+                    ),
+                ),
             ],
             options={
                 'verbose_name': 'VPN server',

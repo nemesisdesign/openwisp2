@@ -582,6 +582,12 @@ class AbstractVpnClient(models.Model):
         automatically deletes related certificates
         and ip addresses if necessary
         """
+        def _post_delete():
+            # only invalidates, does not regenerate the cache
+            # to avoid generating high load during bulk deletes
+            instance.vpn._invalidate_peer_cache()
+            instance.vpn.update_vpn_server_configuration()
+
         if instance.cert:
             instance.cert.delete()
         try:
@@ -589,9 +595,8 @@ class AbstractVpnClient(models.Model):
                 instance.ip.delete()
         except ObjectDoesNotExist:
             pass
-        # only invalidates, does not regenerate the cache
-        # to avoid generating high load during bulk deletes
-        transaction.on_commit(instance.vpn._invalidate_peer_cache)
+
+        transaction.on_commit(_post_delete)
 
     def _auto_create_cert_extra(self, cert):
         """

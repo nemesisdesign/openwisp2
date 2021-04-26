@@ -3,6 +3,7 @@ import logging
 import requests
 from celery import shared_task
 from celery.exceptions import SoftTimeLimitExceeded
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from swapper import load_model
 
@@ -55,7 +56,11 @@ def create_vpn_dh(vpn_pk):
 
 @shared_task(soft_time_limit=1200)
 def trigger_vpn_server_endpoint(endpoint, auth_token, vpn_id):
-    response = requests.post(endpoint, params={'key': auth_token})
+    response = requests.post(
+        endpoint,
+        params={'key': auth_token},
+        verify=False if getattr(settings, 'DEBUG') else True,
+    )
     if response.status_code == 200:
         logger.info(f'Triggered update webhook of VPN Server UUID: {vpn_id}')
     else:

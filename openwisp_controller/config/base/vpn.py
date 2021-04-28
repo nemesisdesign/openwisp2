@@ -168,6 +168,7 @@ class AbstractVpn(ShareableOrgMixinUniqueName, BaseConfig):
         super().save(*args, **kwargs)
         if create_dh:
             transaction.on_commit(lambda: create_vpn_dh.delay(self.id))
+        transaction.on_commit(self.update_vpn_server_configuration)
 
     @classmethod
     def dhparam(cls, length):
@@ -582,6 +583,7 @@ class AbstractVpnClient(models.Model):
         automatically deletes related certificates
         and ip addresses if necessary
         """
+
         def _post_delete():
             # only invalidates, does not regenerate the cache
             # to avoid generating high load during bulk deletes

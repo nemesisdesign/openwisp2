@@ -167,11 +167,6 @@ class BaseConfigAdmin(BaseAdmin):
         kwargs = {}
         config_model = self._get_config_model()
         instance = config_model()
-        if request.POST.get('id'):
-            try:
-                instance = config_model.objects.get(pk=request.POST['id'])
-            except config_model.DoesNotExist:
-                pass
         for key, value in request.POST.items():
             # skip keys that are not model fields
             try:
@@ -196,9 +191,14 @@ class BaseConfigAdmin(BaseAdmin):
         # default context to None to avoid exception
         if 'context' in kwargs:
             kwargs['context'] = kwargs['context'] or None
-        # this object is instanciated only to generate the preview
-        # it won't be saved to the database
-        instance = config_model(**kwargs)
+        try:
+            instance = config_model.objects.get(pk=request.POST['id'])
+            for key, value in kwargs.items():
+                setattr(instance, key, value)
+        except (KeyError, config_model.DoesNotExist):
+            # this object is instanciated only to generate the preview
+            # it won't be saved to the database
+            instance = config_model(**kwargs)
         # turn off special name validation
         # (see ``ShareableOrgMixinUniqueName``)
         instance._validate_name = False

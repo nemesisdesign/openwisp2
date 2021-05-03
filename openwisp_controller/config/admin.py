@@ -178,8 +178,8 @@ class BaseConfigAdmin(BaseAdmin):
                 field = config_model._meta.get_field(key)
             except FieldDoesNotExist:
                 continue
-            # skip m2m or ID
-            if field.many_to_many or key == 'id':
+            # skip m2m
+            if field.many_to_many:
                 continue
             # skip if falsy value and PK or relations
             elif not value and any([field.primary_key, field.is_relation]):

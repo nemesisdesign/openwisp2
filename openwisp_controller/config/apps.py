@@ -12,7 +12,7 @@ from swapper import get_model_name, load_model
 from openwisp_utils.admin_theme import register_dashboard_chart
 
 from . import settings as app_settings
-from .signals import config_modified, device_name_changed
+from .signals import config_modified, device_name_changed, vpn_peers_changed
 
 # ensure Device.hardware_id field is not flagged as unique
 # (because it's flagged as unique_together with organization)
@@ -37,6 +37,7 @@ class ConfigConfig(AppConfig):
     def __setmodels__(self):
         self.device_model = load_model('config', 'Device')
         self.config_model = load_model('config', 'Config')
+        self.vpn_model = load_model('config', 'Vpn')
         self.vpnclient_model = load_model('config', 'VpnClient')
 
     def connect_signals(self):
@@ -80,6 +81,11 @@ class ConfigConfig(AppConfig):
             self.vpnclient_model.post_delete,
             sender=self.vpnclient_model,
             dispatch_uid='vpnclient.post_delete',
+        )
+        vpn_peers_changed.connect(
+            self.vpn_model.update_vpn_server_configuration,
+            sender=self.vpn_model,
+            dispatch_uid='vpn.update_vpn_server_configuration',
         )
 
     def add_default_menu_items(self):

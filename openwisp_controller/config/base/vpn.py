@@ -17,6 +17,7 @@ from openwisp_utils.base import KeyField
 from ...base import ShareableOrgMixinUniqueName
 from .. import crypto
 from .. import settings as app_settings
+from ..signals import vpn_peers_changed
 from ..tasks import create_vpn_dh, trigger_vpn_server_endpoint
 from .base import BaseConfig
 
@@ -168,7 +169,7 @@ class AbstractVpn(ShareableOrgMixinUniqueName, BaseConfig):
         super().save(*args, **kwargs)
         if create_dh:
             transaction.on_commit(lambda: create_vpn_dh.delay(self.id))
-        transaction.on_commit(self.update_vpn_server_configuration)
+        self.update_vpn_server_configuration()
 
     @classmethod
     def dhparam(cls, length):
@@ -179,12 +180,14 @@ class AbstractVpn(ShareableOrgMixinUniqueName, BaseConfig):
             'openssl dhparam {0} 2> /dev/null'.format(length), shell=True
         ).decode('utf-8')
 
-    def update_vpn_server_configuration(self):
-        if self.webhook_endpoint and self.auth_token:
-            trigger_vpn_server_endpoint.delay(
-                endpoint=self.webhook_endpoint,
-                auth_token=self.auth_token,
-                vpn_id=self.pk,
+    def update_vpn_server_configuration(instance, **kwargs):
+        if instance.webhook_endpoint and instance.auth_token:
+            transaction.on_commit(
+                lambda: trigger_vpn_server_endpoint.delay(
+                    endpoint=instance.webhook_endpoint,
+                    auth_token=instance.auth_token,
+                    vpn_id=instance.pk,
+                )
             )
 
     def _auto_create_cert(self):
@@ -406,6 +409,8 @@ class AbstractVpn(ShareableOrgMixinUniqueName, BaseConfig):
             self._get_vxlan_peers.invalidate(self)
             if update:
                 self._get_vxlan_peers()
+        # Send signal for peers changed
+        vpn_peers_changed.send(sender=self.__class__, instance=self)
 
     def _get_peer_queryset(self):
         """
@@ -572,7 +577,6 @@ class AbstractVpnClient(models.Model):
     def post_save(cls, instance, **kwargs):
         def _post_save():
             instance.vpn._invalidate_peer_cache(update=True)
-            instance.vpn.update_vpn_server_configuration()
 
         transaction.on_commit(_post_save)
 
@@ -588,7 +592,6 @@ class AbstractVpnClient(models.Model):
             # only invalidates, does not regenerate the cache
             # to avoid generating high load during bulk deletes
             instance.vpn._invalidate_peer_cache()
-            instance.vpn.update_vpn_server_configuration()
 
         if instance.cert:
             instance.cert.delete()

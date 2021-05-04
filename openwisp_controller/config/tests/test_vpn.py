@@ -9,8 +9,11 @@ from django.test import TestCase, TransactionTestCase
 from openwisp_ipam.tests import CreateModelsMixin as CreateIpamModelsMixin
 from swapper import load_model
 
+from openwisp_utils.tests import catch_signal
+
 from ...vpn_backends import OpenVpn
 from .. import settings as app_settings
+from ..signals import vpn_peers_changed
 from ..tasks import create_vpn_dh
 from .utils import (
     CreateConfigTemplateMixin,
@@ -635,6 +638,11 @@ class TestWireguardTransaction(BaseTestVpn, TestWireguardVpnMixin, TransactionTe
                 'Failed to update VPN Server configuration. '
                 f'Response status code: 404, VPN Server UUID: {vpn.pk}'
             )
+
+    def test_vpn_peers_changed(self):
+        with catch_signal(vpn_peers_changed) as handler:
+            _, vpn, _ = self._create_wireguard_vpn_template()
+            handler.assert_called_once()
 
 
 class TestVxlan(BaseTestVpn, TestVxlanWireguardVpnMixin, TestCase):

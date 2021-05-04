@@ -30,7 +30,7 @@ django.jQuery(function ($) {
     }
 
     var toggleRelatedFields = function () {
-        // Show IP and Subnet field only for Wireguard backend
+        // Show IP and Subnet field only for WireGuard backend
         var backendValue = $('#id_backend').val() === undefined ? '' : $('#id_backend').val().toLocaleLowerCase().toLocaleLowerCase();
         if (backendValue.includes('wireguard') || backendValue.includes('vxlan')) {
             $('label[for="id_subnet"]').parent().parent().show();

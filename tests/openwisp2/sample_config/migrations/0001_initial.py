@@ -260,10 +260,10 @@ class Migration(migrations.Migration):
                     models.CharField(
                         choices=[
                             ('openwisp_controller.vpn_backends.OpenVpn', 'OpenVPN'),
-                            ('openwisp_controller.vpn_backends.Wireguard', 'Wireguard'),
+                            ('openwisp_controller.vpn_backends.Wireguard', 'WireGuard'),
                             (
                                 'openwisp_controller.vpn_backends.VxlanWireguard',
-                                'VXLAN over Wireguard',
+                                'VXLAN over WireGuard',
                             ),
                         ],
                         help_text='Select VPN configuration backend',

@@ -57,7 +57,7 @@ wireguard_properties['items']['required'].remove('private_key')
 
 class Wireguard(BaseWireguard):
     """
-    Wireguard
+    WireGuard
     """
 
     schema = limited_wireguard_schema
@@ -65,7 +65,7 @@ class Wireguard(BaseWireguard):
 
 class VxlanWireguard(BaseVxlanWireguard):
     """
-    VXLAN over Wireguard
+    VXLAN over WireGuard
     """
 
     schema = limited_wireguard_schema

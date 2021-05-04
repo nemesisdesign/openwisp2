@@ -77,7 +77,7 @@ class AbstractVpn(ShareableOrgMixinUniqueName, BaseConfig):
         null=True,
         on_delete=models.CASCADE,
     )
-    # optional, helpful for updating Wireguard and VXLAN server configuration
+    # optional, helpful for updating WireGuard and VXLAN server configuration
     webhook_endpoint = models.CharField(
         verbose_name=_('Webhook Endpoint'),
         help_text=_(
@@ -300,7 +300,7 @@ class AbstractVpn(ShareableOrgMixinUniqueName, BaseConfig):
             * cert in PEM format
             * path to key file
             * key in PEM format
-        Wireguard:
+        WireGuard:
             * public key
             * ip address
         VXLAN:
@@ -415,7 +415,7 @@ class AbstractVpn(ShareableOrgMixinUniqueName, BaseConfig):
     def _get_peer_queryset(self):
         """
         returns an iterator to iterate over tunnel peers
-        used to generate the list of peers of a tunnel (Wireguard/VXLAN)
+        used to generate the list of peers of a tunnel (WireGuard/VXLAN)
         """
         return (
             self.vpnclient_set.select_related('config', 'ip')

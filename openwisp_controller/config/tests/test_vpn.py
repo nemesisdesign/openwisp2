@@ -640,9 +640,15 @@ class TestWireguardTransaction(BaseTestVpn, TestWireguardVpnMixin, TransactionTe
             )
 
     def test_vpn_peers_changed(self):
-        with catch_signal(vpn_peers_changed) as handler:
-            _, vpn, _ = self._create_wireguard_vpn_template()
-            handler.assert_called_once()
+        with self.subTest('VpnClient created'):
+            with catch_signal(vpn_peers_changed) as handler:
+                device, vpn, template = self._create_wireguard_vpn_template()
+                handler.assert_called_once()
+
+        with self.subTest('VpnClient deleted'):
+            with catch_signal(vpn_peers_changed) as handler:
+                device.config.templates.remove(template)
+                handler.assert_called_once()
 
 
 class TestVxlan(BaseTestVpn, TestVxlanWireguardVpnMixin, TestCase):

@@ -331,18 +331,20 @@ Available configuration backends. For more information, see `netjsonconfig backe
 ``OPENWISP_CONTROLLER_VPN_BACKENDS``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-+--------------+----------------------------------------------------------------+
-| **type**:    | ``tuple``                                                      |
-+--------------+----------------------------------------------------------------+
-| **default**: | .. code-block:: python                                         |
-|              |                                                                |
-|              |   (                                                            |
-|              |     ('openwisp_controller.vpn_backends.OpenVpn', 'OpenVPN'),   |
-|              |   )                                                            |
-+--------------+----------------------------------------------------------------+
++--------------+----------------------------------------------------------------------------------+
+| **type**:    | ``tuple``                                                                        |
++--------------+----------------------------------------------------------------------------------+
+| **default**: | .. code-block:: python                                                           |
+|              |                                                                                  |
+|              |   (                                                                              |
+|              |     ('openwisp_controller.vpn_backends.OpenVpn', 'OpenVPN'),                     |
+|              |     ('openwisp_controller.vpn_backends.Wireguard', 'WireGuard'),                 |
+|              |     ('openwisp_controller.vpn_backends.VxlanWireguard', 'VXLAN over WireGuard'), |
+|              |   )                                                                              |
++--------------+----------------------------------------------------------------------------------+
 
 Available VPN backends for VPN Server objects. For more information, see `OpenVPN netjsonconfig backend
-<http://netjsonconfig.openwisp.org/en/latest/backends/openvpn.html>`_.
+<https://netjsonconfig.openwisp.org/en/latest/backends/vpn-backends.html>`_.
 
 A VPN backend must follow some basic rules in order to be compatible with *openwisp-controller*:
 
@@ -471,11 +473,11 @@ provisioned automatically to each device using the template, eg:
 
 - when using OpenVPN, new `x509 <https://tools.ietf.org/html/rfc5280>`_ certificates
   will be generated automatically using the same CA assigned to the related VPN object
-- when using Wireguard, new pair of private and public keys
+- when using WireGuard, new pair of private and public keys
   (using `Curve25519 <http://cr.yp.to/ecdh.html>`_) will be generated, as well as
   an IP address of the subnet assigned to the related VPN object
 - when using `VXLAN <https://tools.ietf.org/html/rfc7348>`_ tunnels over Wireguad,
-  in addition to the configuration generated for Wireguard, a new VID will be generated
+  in addition to the configuration generated for WireGuard, a new VID will be generated
   automatically for each device if the configuration option "auto VNI" is turned on in
   the VPN object
 
@@ -1119,6 +1121,106 @@ Important Notes
   But don't forget to provide the default fall back values in the "default values" template field
   (used mainly for validation).
 
+How to configure tunnels using WireGuard
+----------------------------------------
+
+Follow the procedure described below to setup WireGuard tunnels on your devices.
+
+**Note:** This example uses **Shared systemwide (no organization)** option as
+the organization for VPN server and VPN client template. You can use any
+organization as long as VPN server, VPN client template and Device has same
+organization.
+
+1. Create VPN server configuration for WireGuard
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+1. Visit ``/admin/config/vpn/add/`` to add a new VPN server.
+2. We will set **Name** of this VPN server ``Wireguard`` and **Host** as
+   ``wireguard-server.mydomain.com`` (update this to point to your
+   WireGuard VPN server).
+3. Select ``WireGuard`` from the dropdown as **VPN Backend**.
+4. OpenWISP does IP address management for *WireGuard VPN backend*. You can
+   create a new subnet or select an existing one from the dropdown menu. You
+   can also assign an **Internal IP** to the WireGuard Server or leave it empty
+   for OpenWISP to configure.
+5. We have set the **Webhook Endpoint** as ``https://wireguard-server.mydomain.com:8081/trigger-update``
+   for this example. You will need to update this according to you VPN upgrader
+   endpoint. Set **Webhook AuthToken** to any strong passphrase, this will be
+   used to ensure that configuration upgrades are requested from trusted
+   sources.
+
+   **Note**: If you are following this tutorial for also setting up WireGuard
+   VPN server, just substitute ``wireguard-server.mydomain.com`` with hostname
+   of your VPN server and follow the steps in next section.
+
+6. Under the configuration section, set the name of WireGuard tunnel 1 interface.
+   We have used ``wg0`` in this example.
+
+.. image:: https://raw.githubusercontent.com/openwisp/openwisp-controller/wireguard-vxlan/docs/wireguard-tutorial/vpn-server-1.png
+   :alt: WireGuard VPN server configuration example 1
+
+.. image:: https://raw.githubusercontent.com/openwisp/openwisp-controller/wireguard-vxlan/docs/wireguard-tutorial/vpn-server-2.png
+   :alt: WireGuard VPN server configuration example 2
+
+7. After clicking on **Save and continue editing**, you will see that OpenWISP
+   has automatically created public and private key for WireGuard server in
+   **System Defined Variables** along with internal IP address information.
+
+.. image:: https://raw.githubusercontent.com/openwisp/openwisp-controller/wireguard-vxlan/docs/wireguard-tutorial/vpn-server-3.png
+   :alt: WireGuard VPN server configuration example 3
+
+2. Deploy Wireguard VPN Server
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you haven't already setup WireGuard on your VPN server, this will be a good
+time do so. We stress on using `ansible-wireguard-openwisp <https://github.com/openwisp/ansible-wireguard-openwisp>`_
+role for installing WireGuard since it also installs scripts that allows
+OpenWISP to manage WireGuard VPN server.
+
+Pay attention to the VPN server attributes used in your playbook. It should be same as
+VPN server configuration in OpenWISP.
+
+3. Create VPN template for WireGuard VPN Server
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+1. Visit ``/admin/config/template/add/`` to add a new template.
+2. Set ``Wireguard Client`` as **Name** (you can set whatever you want) and
+   select ``VPN-client`` as **type** from the dropdown list.
+3. The **Backend** field refers to the backend of the device this template can
+   be applied to. For this example, we will leave it to ``OpenWRT``.
+4. Select the correct VPN server from the dropdown for the **VPN** field. Here
+   it is ``Wireguard``.
+5. Ensure that **Automatic tunnel provisioning** is checked. This will make
+   OpenWISP to automatically generate public and private keys and provision IP
+   address for each WireGuard VPN client.
+6. After clicking on **Save and continue editing** button, you will see details
+   of *Wireguard* VPN server in **System Defined Variables**. The template
+   configuration will be automatically generated which you can tweak
+   accordingly. We will use the automatically generate VPN client configuration
+   for this example.
+
+.. image:: https://raw.githubusercontent.com/openwisp/openwisp-controller/wireguard-vxlan/docs/wireguard-tutorial/template.png
+    :alt: WireGuard VPN client template example
+
+4. Apply Wireguard VPN template to devices
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Note**: This step assumes that you already have a device registered on
+OpenWISP. Register or create a device before proceeding.
+
+1. Open the **Configuration** tab of the concerned device.
+2. Select the *WireGuard Client* template.
+3. Upon clicking on **Save and continue editing** button, you will see some
+   entries in **System Defined Variables**. It will contain internal IP address,
+   private and public key for the WireGuard client on the device along with
+   details of WireGuard VPN server.
+
+.. image:: https://raw.githubusercontent.com/openwisp/openwisp-controller/wireguard-vxlan/docs/wireguard-tutorial/device-configuration.png
+   :alt: WireGuard VPN device configuration example
+
+**Voila!** You have successfully configured OpenWISP to manage WireGuard
+tunnels for your devices.
+
 Signals
 -------
 
@@ -1284,8 +1386,8 @@ It is not emitted when the device is created.
 
 The signal is emitted when the peers of VPN server gets changed.
 
-It is only emitted for ``Vpn`` object with **Wireguard** or
-**VXLAN over Wireguard** backend.
+It is only emitted for ``Vpn`` object with **WireGuard** or
+**VXLAN over WireGuard** backend.
 
 Setup (integrate in an existing django project)
 -----------------------------------------------

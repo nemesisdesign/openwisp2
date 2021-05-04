@@ -195,7 +195,7 @@ class BaseConfigAdmin(BaseAdmin):
             instance = config_model.objects.get(pk=request.POST['id'])
             for key, value in kwargs.items():
                 setattr(instance, key, value)
-        except (KeyError, config_model.DoesNotExist):
+        except (KeyError, ValidationError, config_model.DoesNotExist):
             # this object is instanciated only to generate the preview
             # it won't be saved to the database
             instance = config_model(**kwargs)

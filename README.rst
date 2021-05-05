@@ -1139,10 +1139,11 @@ organization.
    ``wireguard-server.mydomain.com`` (update this to point to your
    WireGuard VPN server).
 3. Select ``WireGuard`` from the dropdown as **VPN Backend**.
-4. OpenWISP does IP address management for *WireGuard VPN backend*. You can
-   create a new subnet or select an existing one from the dropdown menu. You
-   can also assign an **Internal IP** to the WireGuard Server or leave it empty
-   for OpenWISP to configure.
+4. When using WireGuard, OpenWISP takes care of managing IP addresses
+   (assigning an IP address to each VPN peer). You can create a new subnet or
+   select an existing one from the dropdown menu. You can also assign an
+   **Internal IP** to the WireGuard Server or leave it empty for OpenWISP to
+   configure.
 5. We have set the **Webhook Endpoint** as ``https://wireguard-server.mydomain.com:8081/trigger-update``
    for this example. You will need to update this according to you VPN upgrader
    endpoint. Set **Webhook AuthToken** to any strong passphrase, this will be

@@ -31,6 +31,13 @@ class TestSubnetDivisionRule(
         )
         self.config = self._create_config(organization=self.org)
 
+    @property
+    def ip_query(self):
+        return IpAddress.objects.exclude(
+            id__in=[self.vpn_server.ip_id]
+            + list(self.vpn_server.vpnclient_set.values_list('ip_id', flat=True))
+        )
+
     def test_field_validations(self):
         default_options = {
             'label': 'OW',
@@ -85,7 +92,7 @@ class TestSubnetDivisionRule(
             subnet_query.count(), rule.number_of_subnets,
         )
         self.assertEqual(
-            IpAddress.objects.count(), (rule.number_of_subnets * rule.number_of_ips)
+            self.ip_query.count(), (rule.number_of_subnets * rule.number_of_ips)
         )
 
         # Verify context of config
@@ -156,7 +163,7 @@ class TestSubnetDivisionRule(
         subnet_query = Subnet.objects.exclude(id=self.master_subnet.id).filter(
             organization=rule.organization
         )
-        ip_query = IpAddress.objects
+        ip_query = self.ip_query
         index_query = rule.subnetdivisionindex_set
 
         self.assertEqual(subnet_query.count(), rule.number_of_subnets)
@@ -185,15 +192,17 @@ class TestSubnetDivisionRule(
         self.assertEqual(
             subnet_query.count(), rule.number_of_subnets,
         )
+        # 1 IP is automatically assigned to VPN server and client each,
+        # hence add two in below assertion
         self.assertEqual(
-            IpAddress.objects.count(), (rule.number_of_subnets * rule.number_of_ips)
+            self.ip_query.count(), (rule.number_of_subnets * rule.number_of_ips)
         )
 
         self.config.templates.remove(self.template)
         self.assertEqual(
             subnet_query.count(), 0,
         )
-        self.assertEqual(IpAddress.objects.count(), 0)
+        self.assertEqual(self.ip_query.count(), 0)
 
     @patch('logging.Logger.error')
     def test_subnets_exhausted(self, mocked_logger):
@@ -221,7 +230,7 @@ class TestSubnetDivisionRule(
 
         self.assertEqual(rule.subnetdivisionindex_set.count(), 0)
         self.assertEqual(Subnet.objects.exclude(id=self.master_subnet.id).count(), 0)
-        self.assertEqual(IpAddress.objects.count(), 0)
+        self.assertEqual(self.ip_query.count(), 0)
 
     def test_vpn_subnet_no_rule(self):
         # Tests the scenario where a SubDivisionRule does not exist
@@ -265,12 +274,12 @@ class TestSubnetDivisionRule(
         self.assertEqual(subnet_query.count(), rule.number_of_subnets)
 
     def test_sharable_vpn_vpnclient_subnet_multiple_rules(self):
+        self.master_subnet.organization = None
+        self.master_subnet.save()
+
         vpn_server = self._create_vpn(name='vpn-server', subnet=self.master_subnet)
 
         template = self._create_template(name='vpn-client', type='vpn', vpn=vpn_server)
-
-        self.master_subnet.organization = None
-        self.master_subnet.save()
 
         org1 = self._create_org(name='org1')
         org2 = self._create_org(name='org2')

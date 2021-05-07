@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     # openwisp2 admin theme
     # (must be loaded here)
     'openwisp_utils.admin_theme',
+    # admin
     'django.contrib.admin',
     'django.forms',
     # other dependencies
@@ -137,6 +138,15 @@ OPENWISP_ADMIN_DASHBOARD_ENABLED = True
 
 # during development only
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+if not TESTING:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': 'redis://127.0.0.1:6379/6',
+            'OPTIONS': {'CLIENT_CLASS': 'django_redis.client.DefaultClient',},
+        }
+    }
 
 if not TESTING:
     CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost/1')

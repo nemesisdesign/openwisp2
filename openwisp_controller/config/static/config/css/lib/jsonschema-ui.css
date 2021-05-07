@@ -290,3 +290,14 @@ div.jsoneditor .inline-related h3 {
   bottom: -52px;
   z-index: 99;
 }
+
+.jsoneditor-wrapper div.jsoneditor .grid-row .grid-column > select.switcher{
+    position: static;
+    margin-top: 15px;
+}
+.jsoneditor-wrapper div.jsoneditor .grid-row > .grid-column > label {
+    display: none;
+}
+.jsoneditor-wrapper div.jsoneditor .inline-group > .form-row > label {
+    display: block !important;
+}

@@ -236,5 +236,4 @@ class TestDeviceAdmin(
             reverse(f'admin:{self.ipam_label}_subnet_changelist')
         )
         self.assertEqual(subnet_response.status_code, 200)
-        print(subnet_response.content)
         self.assertContains(subnet_response, self.config.device.name, 1)

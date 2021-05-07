@@ -43,18 +43,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='vpn',
-            name='subnet',
-            field=models.ForeignKey(
-                blank=True,
-                help_text='Subnet IP addresses used by VPN clients, if applicable',
-                null=True,
-                on_delete=django.db.models.deletion.CASCADE,
-                to=swapper.get_model_name('openwisp_ipam', 'Subnet'),
-                verbose_name='Subnet',
-            ),
-        ),
-        migrations.AddField(
-            model_name='vpn',
             name='auth_token',
             field=models.CharField(
                 blank=True,

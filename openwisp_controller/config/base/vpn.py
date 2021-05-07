@@ -67,7 +67,7 @@ class AbstractVpn(ShareableOrgMixinUniqueName, BaseConfig):
         help_text=_('Subnet IP addresses used by VPN clients, if applicable'),
         blank=True,
         null=True,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
     )
     ip = models.ForeignKey(
         get_model_name('openwisp_ipam', 'IpAddress'),

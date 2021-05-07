@@ -329,7 +329,7 @@ class Migration(migrations.Migration):
                             'Subnet IP addresses used by VPN clients, if applicable'
                         ),
                         null=True,
-                        on_delete=django.db.models.deletion.CASCADE,
+                        on_delete=django.db.models.deletion.SET_NULL,
                         to=settings.OPENWISP_IPAM_SUBNET_MODEL,
                         verbose_name='Subnet',
                     ),

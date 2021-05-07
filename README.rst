@@ -1509,6 +1509,7 @@ Add ``openwisp_controller`` applications to ``INSTALLED_APPS``:
         'openwisp_controller.notifications',
         'openwisp_users',
         'openwisp_notifications',
+        'openwisp_ipam',
         # openwisp2 admin theme
         # (must be loaded here)
         'openwisp_utils.admin_theme',
@@ -1571,6 +1572,7 @@ Add the URLs to your main ``urls.py``:
         url(r'^admin/', admin.site.urls),
         url(r'', include('openwisp_controller.urls')),
         url(r'', include('openwisp_notifications.urls')),
+        url(r'', include('openwisp_ipam.urls')),
     ]
 
 Configure caching (you may use a different cache storage if you want):
